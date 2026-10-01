@@ -8,10 +8,11 @@ export function ComponentGallery({ tokens }: { tokens: BrandTokens }) {
 
 function ComponentCard({ name, index, tokens }: { name: string; index: number; tokens: BrandTokens }) {
   const variant = index % 4
+  const radius = (slot: number) => `${tokens.radiusScale[slot] ?? 0}px`
   return <article className="component-card"><div className="sample-meta"><span className="sample-index">{String(index + 1).padStart(2, '0')}</span><span>{name}</span></div><div className={`sample sample-${variant}`}>
-    {variant === 0 && <><button style={{ background: tokens.primary, borderRadius: tokens.radiusScale[1] }}>继续探索 <span>→</span></button><button className="ghost-button" style={{ borderRadius: tokens.radiusScale[1] }}>次要操作</button></>}
-    {variant === 1 && <><div className="fake-input" style={{ borderRadius: tokens.radiusScale[0] }}>搜索品牌资产 <span>⌕</span></div><div className="tag-row"><span style={{ background: `${tokens.primary}18`, color: tokens.primary, borderRadius: tokens.radiusScale[3] }}>进行中</span><span className="neutral-tag" style={{ borderRadius: tokens.radiusScale[3] }}>设计系统</span></div></>}
-    {variant === 2 && <><div className="avatar-row"><span className="avatar" style={{ background: tokens.secondary }}>BM</span><div><strong>BrandMirror</strong><small>刚刚更新视觉令牌</small></div><span className="more">•••</span></div><div className="mini-progress"><span style={{ background: tokens.primary, width: `${55 + index * 2}%` }} /></div></>}
-    {variant === 3 && <><div className="toggle-row"><span>实时同步预览</span><span className="toggle" style={{ background: tokens.primary }}><i /></span></div><div className="metric-row"><strong style={{ color: tokens.secondary }}>{index + 8}.{index}</strong><span>一致性分</span></div></>}
+    {variant === 0 && <><button style={{ background: tokens.primary ?? undefined, borderRadius: radius(1) }}>继续探索 <span>→</span></button><button className="ghost-button" style={{ borderRadius: radius(1) }}>次要操作</button></>}
+    {variant === 1 && <><div className="fake-input" style={{ borderRadius: radius(0) }}>搜索品牌资产 <span>⌕</span></div><div className="tag-row"><span style={{ background: tokens.primary ? `${tokens.primary}18` : undefined, color: tokens.primary ?? undefined, borderRadius: radius(3) }}>进行中</span><span className="neutral-tag" style={{ borderRadius: radius(3) }}>设计系统</span></div></>}
+    {variant === 2 && <><div className="avatar-row"><span className="avatar" style={{ background: tokens.secondary ?? undefined }}>BM</span><div><strong>BrandMirror</strong><small>刚刚更新视觉令牌</small></div><span className="more">•••</span></div><div className="mini-progress"><span style={{ background: tokens.primary ?? undefined, width: `${55 + index * 2}%` }} /></div></>}
+    {variant === 3 && <><div className="toggle-row"><span>实时同步预览</span><span className="toggle" style={{ background: tokens.primary ?? undefined }}><i /></span></div><div className="metric-row"><strong style={{ color: tokens.secondary ?? undefined }}>{index + 8}.{index}</strong><span>一致性分</span></div></>}
   </div></article>
 }

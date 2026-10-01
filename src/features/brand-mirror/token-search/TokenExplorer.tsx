@@ -16,11 +16,11 @@ export function TokenExplorer({ tokens }: { tokens: BrandTokens }) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<TokenCategory>('all')
   const entries = useMemo<TokenEntry[]>(() => [
-    { key: 'color.primary', label: '主色', category: 'color', value: tokens.primary },
-    { key: 'color.secondary', label: '辅助色', category: 'color', value: tokens.secondary },
-    ...tokens.radiusScale.map((value, index) => ({ key: `radius.${index + 1}`, label: `圆角 ${index + 1}`, category: 'radius' as const, value: `${value}px` })),
-    ...tokens.spacingScale.map((value, index) => ({ key: `spacing.${index + 1}`, label: `间距 ${index + 1}`, category: 'spacing' as const, value: `${value}px` })),
-    ...tokens.typeScale.map((value, index) => ({ key: `type.${index + 1}`, label: `字体 ${index + 1}`, category: 'type' as const, value: `${value}px` })),
+    { key: 'color.primary', label: '主色', category: 'color', value: tokens.primary ?? '— 空 —' },
+    { key: 'color.secondary', label: '辅助色', category: 'color', value: tokens.secondary ?? '— 空 —' },
+    ...tokens.radiusScale.map((value, index) => ({ key: `radius.${index + 1}`, label: `圆角 ${index + 1}`, category: 'radius' as const, value: value === null ? '— 空 —' : `${value}px` })),
+    ...tokens.spacingScale.map((value, index) => ({ key: `spacing.${index + 1}`, label: `间距 ${index + 1}`, category: 'spacing' as const, value: value === null ? '— 空 —' : `${value}px` })),
+    ...tokens.typeScale.map((value, index) => ({ key: `type.${index + 1}`, label: `字体 ${index + 1}`, category: 'type' as const, value: value === null ? '— 空 —' : `${value}px` })),
   ], [tokens])
   const normalizedQuery = query.trim().toLowerCase()
   const visibleEntries = entries.filter((entry) => {
