@@ -1,4 +1,5 @@
-import type { BrandMirrorSnapshot, BrandTheme } from '../models/brandMirrorModels'
+import type { BrandMirrorSnapshot, BrandTheme, ImportConflictMode, ImportFieldKey, ImportScaleStrategy } from '../models/brandMirrorModels'
+import { ImportTokens } from './ImportTokens'
 
 interface TokenControlsProps {
   snapshot: BrandMirrorSnapshot
@@ -6,6 +7,13 @@ interface TokenControlsProps {
   onColorChange: (field: 'primary' | 'secondary', value: string) => void
   onScaleChange: (field: 'radiusScale' | 'spacingScale' | 'typeScale', index: number, value: number) => void
   onReset: () => void
+  onImportFile: (file: File) => void
+  onCancelImport: () => void
+  onApplyImport: () => void
+  onImportModeChange: (mode: ImportConflictMode) => void
+  onImportStrategyChange: (strategy: ImportScaleStrategy) => void
+  onImportFieldToggle: (field: ImportFieldKey, selected: boolean) => void
+  onImportFieldMap: (field: ImportFieldKey, candidateId: string) => void
 }
 
 const themes: { id: BrandTheme; label: string; note: string }[] = [
@@ -14,7 +22,7 @@ const themes: { id: BrandTheme; label: string; note: string }[] = [
   { id: 'night', label: 'Night signal', note: '锐利 · 数字' },
 ]
 
-export function TokenControls({ snapshot, onThemeChange, onColorChange, onScaleChange, onReset }: TokenControlsProps) {
+export function TokenControls({ snapshot, onThemeChange, onColorChange, onScaleChange, onReset, onImportFile, onCancelImport, onApplyImport, onImportModeChange, onImportStrategyChange, onImportFieldToggle, onImportFieldMap }: TokenControlsProps) {
   return (
     <aside className="control-panel">
       <div className="panel-heading">
@@ -22,7 +30,19 @@ export function TokenControls({ snapshot, onThemeChange, onColorChange, onScaleC
           <span className="eyebrow">01 / TOKENS</span>
           <h2>视觉令牌</h2>
         </div>
-        <button className="text-button" type="button" onClick={onReset}>恢复默认</button>
+        <div className="panel-heading-actions">
+          <ImportTokens
+            snapshot={snapshot}
+            onImportFile={onImportFile}
+            onCancel={onCancelImport}
+            onApply={onApplyImport}
+            onModeChange={onImportModeChange}
+            onStrategyChange={onImportStrategyChange}
+            onFieldToggle={onImportFieldToggle}
+            onFieldMap={onImportFieldMap}
+          />
+          <button className="text-button" type="button" onClick={onReset}>恢复默认</button>
+        </div>
       </div>
 
       <section className="control-section">

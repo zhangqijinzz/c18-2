@@ -1,7 +1,15 @@
 import { clampTokenValues, cloneTokens, contrastRatio, normalizeColor, themeTokens, validateTokens } from '../domain/brandRules'
 import type { BrandRepository } from '../repositories/brandRepository'
 import type { BrandGuidelinesExporter } from '../services/exportService'
-import { INITIAL_TOKENS, type BrandDocument, type BrandMirrorSnapshot, type BrandTheme, type SavedVersion } from '../models/brandMirrorModels'
+import {
+  applyImportDraft,
+  changeFieldSelection,
+  changeImportMode,
+  changeScaleStrategy,
+  createImportPreview,
+  mapImportCandidate,
+} from '../services/importService'
+import { INITIAL_TOKENS, type BrandDocument, type BrandMirrorSnapshot, type BrandTheme, type ImportConflictMode, type ImportFieldKey, type ImportScaleStrategy, type SavedVersion } from '../models/brandMirrorModels'
 
 type Listener = () => void
 
@@ -48,6 +56,84 @@ export class BrandMirrorViewModel {
     const values = [...this.snapshot.tokens[field]]
     values[index] = Number.isFinite(value) ? value : values[index]
     this.update({ tokens: clampTokenValues({ ...this.snapshot.tokens, [field]: values }) }, '令牌已更新')
+  }
+
+  previewImportFile(file: File): void {
+    const reader = new FileReader()
+    reader.onload = () => this.previewImportText(String(reader.result ?? ''), file.name)
+    reader.onerror = () => {
+      this.snapshot = { ...this.snapshot, status: 'error', message: '文件读取失败，请重新选择令牌文件' }
+      this.emit()
+    }
+    reader.readAsText(file)
+  }
+
+  previewImportText(text: string, fileName = 'tokens.json'): void {
+    try {
+      const importDraft = createImportPreview(text, this.snapshot.tokens, fileName)
+      this.snapshot = { ...this.snapshot, status: 'ready', message: `已解析 ${fileName}，请确认映射结果`, importDraft }
+      this.emit()
+    } catch {
+      this.snapshot = { ...this.snapshot, status: 'error', message: '无法解析导入文件，请确认它是有效 JSON', importDraft: null }
+      this.emit()
+    }
+  }
+
+  selectImportConflictMode(conflictMode: ImportConflictMode): void {
+    if (!this.snapshot.importDraft) return
+    this.setImportDraft(changeImportMode(this.snapshot.importDraft, this.snapshot.tokens, conflictMode))
+  }
+
+  selectImportScaleStrategy(scaleStrategy: ImportScaleStrategy): void {
+    if (!this.snapshot.importDraft) return
+    this.setImportDraft(changeScaleStrategy(this.snapshot.importDraft, this.snapshot.tokens, scaleStrategy))
+  }
+
+  toggleImportField(fieldKey: ImportFieldKey, selected: boolean): void {
+    if (!this.snapshot.importDraft) return
+    this.setImportDraft(changeFieldSelection(this.snapshot.importDraft, fieldKey, selected))
+  }
+
+  mapImportField(fieldKey: ImportFieldKey, candidateId: string): void {
+    if (!this.snapshot.importDraft) return
+    this.setImportDraft(mapImportCandidate(this.snapshot.importDraft, this.snapshot.tokens, fieldKey, candidateId))
+  }
+
+  cancelImport(): void {
+    if (!this.snapshot.importDraft) return
+    this.snapshot = { ...this.snapshot, importDraft: null, message: '已取消导入，本地令牌未改变' }
+    this.emit()
+  }
+
+  applyImport(): void {
+    if (!this.snapshot.importDraft) return
+    const draft = this.snapshot.importDraft
+    const tokens = applyImportDraft(draft, this.snapshot.tokens)
+    const appliedCount = draft.fields.filter((field) => field.selected && field.status !== 'missing').length
+    if (appliedCount === 0) {
+      this.snapshot = { ...this.snapshot, status: 'error', message: '请至少选择一个有效字段后再导入', importDraft: draft }
+      this.emit()
+      return
+    }
+    const nextVersion: SavedVersion = {
+      id: `version-${Date.now()}`,
+      label: `导入 ${draft.fileName.replace(/\.[^.]+$/, '')}`.slice(0, 24),
+      tokens: cloneTokens(tokens),
+      createdAt: new Date().toISOString(),
+    }
+    const document = { tokens, theme: this.snapshot.theme, versions: [...this.snapshot.versions, nextVersion] }
+    try {
+      this.repository.save({ version: 1, ...document })
+      this.snapshot = this.makeSnapshot(document, `已导入 ${appliedCount} 个字段，并保存为版本「${nextVersion.label}」`, 'ready')
+    } catch {
+      this.snapshot = { ...this.snapshot, status: 'error', message: '导入结果无法保存，请检查令牌值', importDraft: draft }
+    }
+    this.emit()
+  }
+
+  private setImportDraft(importDraft: BrandMirrorSnapshot['importDraft']): void {
+    this.snapshot = { ...this.snapshot, message: '映射预览已更新，尚未写入本地令牌', importDraft }
+    this.emit()
   }
 
   reset(): void {
@@ -112,10 +198,10 @@ export class BrandMirrorViewModel {
     this.emit()
   }
 
-  private makeSnapshot(document: Omit<BrandDocument, 'version'>, message = '', status: BrandMirrorSnapshot['status'] = 'ready'): BrandMirrorSnapshot {
+  private makeSnapshot(document: Omit<BrandDocument, 'version'>, message = '', status: BrandMirrorSnapshot['status'] = 'ready', importDraft: BrandMirrorSnapshot['importDraft'] = null): BrandMirrorSnapshot {
     const ratio = contrastRatio(document.tokens.primary, document.tokens.secondary)
     const latestVersion = document.versions[document.versions.length - 1]
-    return { status, tokens: cloneTokens(document.tokens), theme: document.theme, versions: document.versions, compareMode: false, activeVersionId: latestVersion?.id ?? null, contrastRatio: ratio, contrastWarning: ratio < 3, message }
+    return { status, tokens: cloneTokens(document.tokens), theme: document.theme, versions: document.versions, compareMode: false, activeVersionId: latestVersion?.id ?? null, contrastRatio: ratio, contrastWarning: ratio < 3, message, importDraft }
   }
 
   private emit(): void {
